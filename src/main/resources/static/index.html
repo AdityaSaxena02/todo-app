@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Todo App</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        #todo-form { display: flex; margin-bottom: 20px; }
+        #todo-input, #description-input { flex-grow: 1; padding: 10px; margin-right: 10px; }
+        #todo-list { list-style-type: none; padding: 0; }
+        #todo-list li { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+            align-items: center;
+        }
+        .completed { text-decoration: line-through; color: gray; }
+        .todo-details { display: flex; flex-direction: column; }
+        .todo-actions { display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Todo List</h1>
+    <form id="todo-form">
+        <input type="text" id="todo-input" placeholder="Todo Title" required>
+        <input type="text" id="description-input" placeholder="Description (optional)">
+        <button type="submit">Add Todo</button>
+    </form>
+    <ul id="todo-list"></ul>
+
+    <script>
+        const todoForm = document.getElementById('todo-form');
+        const todoInput = document.getElementById('todo-input');
+        const descriptionInput = document.getElementById('description-input');
+        const todoList = document.getElementById('todo-list');
+
+        // Fetch todos
+        function fetchTodos() {
+            fetch('/api/todos')
+                .then(response => response.json())
+                .then(todos => {
+                    todoList.innerHTML = '';
+                    todos.forEach(todo => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div class="todo-details">
+                                <span class="${todo.completed ? 'completed' : ''}">${todo.title}</span>
+                                ${todo.description ? `<small>${todo.description}</small>` : ''}
+                            </div>
+                            <div class="todo-actions">
+                                <button onclick="toggleTodo(${todo.id}, ${todo.completed})">
+                                    ${todo.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                                </button>
+                                <button onclick="deleteTodo(${todo.id})">Delete</button>
+                            </div>
+                        `;
+                        todoList.appendChild(li);
+                    });
+                });
+        }
+
+        // Add todo
+        todoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            fetch('/api/todos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: todoInput.value,
+                    description: descriptionInput.value,
+                    completed: false
+                })
+            })
+            .then(() => {
+                todoInput.value = '';
+                descriptionInput.value = '';
+                fetchTodos();
+            });
+        });
+
+        // Toggle todo completion
+        function toggleTodo(id, currentStatus) {
+            fetch(`/api/todos/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    completed: !currentStatus
+                })
+            })
+            .then(() => fetchTodos());
+        }
+
+        // Delete todo
+        function deleteTodo(id) {
+            fetch(`/api/todos/${id}`, {
+                method: 'DELETE'
+            })
+            .then(() => fetchTodos());
+        }
+
+        // Initial fetch
+        fetchTodos();
+    </script>
+</body>
+</html>
